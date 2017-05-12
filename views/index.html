@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hei</title>
+    <script src="javascripts/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="stylesheets/style.css">
+</head>
+<body  style="overflow: hidden">
+<div id='indexApp'>
+    <layout></layout>
+    <video ref="currentGameVideo" loop poster="http://ojcwyb2ht.bkt.clouddn.com/Zelda1200p.jpg" id="currentGameVideo">
+        <source src="" type="video/mp4">
+    </video>
+    <div class="scroll-parent">
+    <div class="description">{{currentGame.description}}</div>
+    </div>
+    <a class="gameName" href="http://www.baidu.com" target="_blank">{{currentGame.name}}</a>
+</div>
+</body>
+<script src="javascripts/indexController.js">
+</script>
+</html>

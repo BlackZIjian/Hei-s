@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>lesson1-by-shawn.xie</title>
+    <style type="text/css">
+        div#canvas3d{
+            border: none;
+            cursor: move;
+            width: 1400px;
+            height: 600px;
+            background-color: #EEEEEE;
+        }
+        .can{
+            -webkit-filter:blur(2px);
+        }
+    </style>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+
+<body >
+<canvas id="myCanvas" class="can" style="position: absolute;left: 0;top: 0;z-index: -1;" width="800" height="945"></canvas>
+<canvas id="noise"  style="position: absolute;left: 0;top: 0;" width="800" height="945"></canvas>
+</body>
+<script type="text/javascript">
+    var reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
+
+    String.prototype.colorRgb = function(){
+        var sColor = this.toLowerCase();
+        if(sColor && reg.test(sColor)){
+            if(sColor.length === 4){
+                var sColorNew = "#";
+                for(var i=1; i<4; i+=1){
+                    sColorNew += sColor.slice(i,i+1).concat(sColor.slice(i,i+1));
+                }
+                sColor = sColorNew;
+            }
+            //处理六位的颜色值
+            var sColorChange = [];
+            for(var j=1; j<7; j+=2){
+                sColorChange.push(parseInt("0x"+sColor.slice(j,j+2)));
+            }
+            return sColorChange;
+        }else{
+            return sColor;
+        }
+    };
+    var fps = 30;
+    var tick = 1 / fps * 1000;
+    var now = 0;
+    var c = document.getElementById("myCanvas");
+    c.width = window.innerWidth;
+    c.height = window.innerHeight;
+    var cxt = c.getContext("2d");
+    var stars = [];
+
+    var colors = [
+        "#ffecce",
+        "#fff9d4",
+        "#b3acb9",
+        "#fdffeb"
+    ];
+//    for(var i=0;i<19;i++) {
+//        for(var j=0;j<19;j++) {
+//            var rate = Math.random() * 2 + 1;
+//            var minr = Math.random() * 2 +1;
+//            var color = Math.floor(Math.random() * colors.length);
+//            var star = {
+//                x:(i+1)*(c.width / 20),
+//                y:(j+1)*(c.height / 20),
+//                r:0,
+//                allR:0,
+//                maxr:minr+2,
+//                minr:minr,
+//                rate:rate,
+//                colorIndex:color
+//            };
+//            stars.push(star);
+//        }
+//    }
+
+
+    var Tick = function () {
+        for(var i =0;i<stars.length;i++) {
+            var star = stars[i];
+            star.r = (Math.sin((now % star.rate) / star.rate * 2 * Math.PI) + star.minr + 1 ) / 2 * (star.maxr - star.minr);
+            star.allR = star.r * ((Math.sin((now % star.rate) / star.rate * 2 * Math.PI) + 1) / 2 + 1);
+        }
+        draw();
+        now = now + tick / 1000;
+    };
+    var draw = function () {
+        cxt.clearRect(0, 0, c.width, c.height);
+        cxt.fillStyle = "#000000";
+        cxt.fillRect(0, 0, c.width, c.height);
+
+
+        for(var i =0;i<stars.length;i++) {
+            var star = stars[i];
+            var ocolor = colors[star.colorIndex].colorRgb();
+            var rgba = {
+                r:ocolor[0],
+                g:ocolor[1],
+                b:ocolor[2],
+                a:1
+            };
+            rgba.a = 0.1;
+            cxt.fillStyle = "rgba(" + rgba.r + "," + rgba.g + "," + rgba.b + "," + rgba.a + ")";
+            cxt.beginPath();
+            cxt.arc(star.x, star.y, star.allR, 0, Math.PI * 2, true);
+            cxt.closePath();
+            cxt.fill();
+            cxt.fillStyle = colors[star.colorIndex];
+            cxt.beginPath();
+            cxt.arc(star.x, star.y, star.r, 0, Math.PI * 2, true);
+            cxt.closePath();
+            cxt.fill();
+
+        }
+
+
+    };
+    window.setInterval(Tick,tick);
+    axios.get('http://localhost:14929/webHomework/getStarsPos', {
+        params: {
+            width: window.innerWidth,
+            height:window.innerHeight
+        }})
+        .then(function (response) {
+            var starPoses = response.data;
+            for(var i=0;i<starPoses.length;i++) {
+                var rate = Math.random() * 2 + 1;
+                var minr = Math.random() * 2 +1;
+                var color = Math.floor(Math.random() * colors.length);
+                var star = {
+                    x: starPoses[i].u,
+                    y: starPoses[i].v,
+                    r: 0,
+                    allR: 0,
+                    maxr: (minr + 2)* starPoses[i].l,
+                    minr: minr * starPoses[i].l,
+                    rate: rate,
+                    colorIndex: color
+                };
+                stars.push(star);
+            }
+        })
+        .catch(function (error) {
+            console.log(error);
+        });
+</script>
+<script type="text/javascript">
+    var nc = document.getElementById("noise");
+    nc.width = window.innerWidth;
+    nc.height = window.innerHeight;
+    var ncxt = nc.getContext("2d");
+
+    var options ={
+        pieceWidth:300,
+        pieceHeight:150,
+        pixelWidth:2,
+        pixelHeight:2
+    };
+
+    // 片段噪点canvas
+
+
+    // 这里的canvas参数就是页面中的canvas啦
+    var context = nc.getContext('2d');
+    // 根据尺寸算出需要多少个片段可以拼出来
+    var width = nc.width, height = nc.height;
+    var pieceWidth = options.pieceWidth, pieceHeight = options.pieceHeight;
+
+    // 片段个数
+    var tileNumH = Math.ceil(width / pieceWidth),
+        tileNumV = Math.ceil(height / pieceHeight);
+    var canvasPiece = function(options) {
+        var canvas = document.createElement('canvas'), context = canvas.getContext('2d');
+        // 尺寸
+        var pieceWidth = options.pieceWidth, pieceHeight = options.pieceHeight;
+        // 像素点大小
+        var pixelWidth = options.pixelWidth, pixelHeight = options.pixelHeight;
+
+        // 在特定的小尺寸上，绘制满满的随机灰色系的颜色
+        for(var y = 0; y < pieceHeight; y+=pixelHeight){
+            for(var x = 0; x < pieceWidth; x+=pixelWidth) {
+                var color = Math.floor(Math.random() * 150);
+                context.fillStyle = "rgba(" + color + "," + color + "," + color + ",0.13)";
+                context.fillRect(x, y, pixelWidth, pixelHeight);
+            }
+        }
+        return canvas;
+    };
+    var ndraw = function () {
+        // 使用drawImage方法把片段噪点一个一个绘制到大的画布上
+        for(var x = 0; x < tileNumH; x++) {
+            for(var y = 0; y < tileNumV; y++) {
+                ncxt.drawImage(
+                    // 被用来复制的片段canvas图形
+                    piece,
+                    // 拿来绘制的画布的起始点和区域大小
+                    0, 0,
+                    pieceWidth, pieceHeight,
+                    // 当前画布绘制的起始点和区域大小
+                    x * pieceWidth,
+                    y * pieceHeight,
+                    pieceWidth,
+                    pieceHeight
+                );
+            }
+        }
+    };
+    var piece = canvasPiece(options);
+    var newNoise = function () {
+        ncxt.clearRect(0, 0, c.width, c.height);
+        piece = canvasPiece(options);
+        ndraw();
+    };
+   window.setInterval(newNoise,tick);
+
+
+
+
+</script>
+</html>
