@@ -60,24 +60,6 @@
         "#b3acb9",
         "#fdffeb"
     ];
-//    for(var i=0;i<19;i++) {
-//        for(var j=0;j<19;j++) {
-//            var rate = Math.random() * 2 + 1;
-//            var minr = Math.random() * 2 +1;
-//            var color = Math.floor(Math.random() * colors.length);
-//            var star = {
-//                x:(i+1)*(c.width / 20),
-//                y:(j+1)*(c.height / 20),
-//                r:0,
-//                allR:0,
-//                maxr:minr+2,
-//                minr:minr,
-//                rate:rate,
-//                colorIndex:color
-//            };
-//            stars.push(star);
-//        }
-//    }
 
 
     var Tick = function () {
@@ -221,5 +203,42 @@
 
 
 
+</script>
+<script type="text/javascript">
+    var kw = false;
+    var ks = false;
+    var ka = false;
+    var kd = false;
+    document.onkeydown=function(event){
+        var e = event || window.event || arguments.callee.caller.arguments[0];
+                   if(e && e.keyCode==87){ // 按 W
+                          kw = true;
+                   }
+        if(e && e.keyCode==83){ // 按 W
+            ks = true;
+        }
+        if(e && e.keyCode==65){ // 按 W
+            ka = true;
+        }
+        if(e && e.keyCode==68){ // 按 W
+            kd = true;
+        }
+    };
+
+    document.onkeyup=function(event){
+        var e = event || window.event || arguments.callee.caller.arguments[0];
+        if(e && e.keyCode==87){ // 按 W
+            kw = false;
+        }
+        if(e && e.keyCode==83){ // 按 W
+            ks = false;
+        }
+        if(e && e.keyCode==65){ // 按 W
+            ka = false;
+        }
+        if(e && e.keyCode==68){ // 按 W
+            kd = false;
+        }
+    };
 </script>
 </html>
