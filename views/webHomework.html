@@ -14,13 +14,29 @@
         .can{
             -webkit-filter:blur(2px);
         }
+        .content{
+            position: absolute;
+            top: 300px;
+            left:20%;
+            right: 20%;
+            filter: blur(1px);
+            color: antiquewhite;
+            font-size: 27px;
+
+        }
+        @keyframes zoom
+        {
+            from {transform: scale(2,2);opacity: 1}
+            to {transform: scale(1,1);opacity: 0}
+        }
     </style>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 </head>
 
-<body >
-<canvas id="myCanvas" class="can" style="position: absolute;left: 0;top: 0;z-index: -1;" width="800" height="945"></canvas>
+<body id="body" onmousedown="getCanvasPos(event)" >
+<canvas  id="myCanvas" class="can" style="position: absolute;left: 0;top: 0;z-index: -1;" width="800" height="945"></canvas>
 <canvas id="noise"  style="position: absolute;left: 0;top: 0;" width="800" height="945"></canvas>
+<div id="content" class="content"></div>
 </body>
 <script type="text/javascript">
     var reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
@@ -60,7 +76,33 @@
         "#b3acb9",
         "#fdffeb"
     ];
+    function getCanvasPos(e)
+    {//获取鼠标在canvas上的坐标
+        var ele = document.getElementById("myCanvas");
+        var rect = document.getElementById("myCanvas").getBoundingClientRect();
+        var pos = {
+            x: e.clientX - rect.left * (ele.width / rect.width),
+            y: e.clientY - rect.top * (ele.height / rect.height)
+        };
+        for(var i =0;i<stars.length;i++) {
+            var star = stars[i];
+            var deltaX = pos.x - star.x;
+            var deltaY = pos.y - star.y;
+            var dis2 = Math.pow(deltaX,2) +  Math.pow(deltaY,2);
+            if(dis2 <= 10) {
+                clickStar(star);
+                break;
+            }
+        }
+    }
 
+    function clickStar(star) {
+        var mcontent = "这颗星位于x:"+star.ax+",y:"+star.ay+"z:"+star.az+"，是（某用户）于（某时间）加入的记忆";
+        var con = document.getElementById("content");
+        con.innerHTML = mcontent;
+        //con.className = "content";
+
+    }
 
     var Tick = function () {
         for(var i =0;i<stars.length;i++) {
@@ -103,7 +145,8 @@
 
     };
     window.setInterval(Tick,tick);
-    axios.get('http://localhost:14929/webHomework/getStarsPos', {
+    var path = "http://heibe.imwork.net:39881";
+    axios.get(path +'/webHomework/getStarsPos', {
         params: {
             width: window.innerWidth,
             height:window.innerHeight
@@ -122,7 +165,10 @@
                     maxr: (minr + 2)* starPoses[i].l,
                     minr: minr * starPoses[i].l,
                     rate: rate,
-                    colorIndex: color
+                    colorIndex: color,
+                    ax:starPoses[i].ax,
+                    ay:starPoses[i].ay,
+                    az:starPoses[i].az
                 };
                 stars.push(star);
             }

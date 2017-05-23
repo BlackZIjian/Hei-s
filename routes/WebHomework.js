@@ -75,6 +75,9 @@ router.get('/getStarsPos', function(req, res, next) {
     for(var i =0;i<ws.length;i++) {
         var re = converse.converse(ws[i].x,ws[i].y,ws[i].z,80,R,C,0.3,0.001,0.001,req.query.width,req.query.height);
         if(re != "error" && re.u > 0 && re.u < req.query.width &&re.v > 0 && re.v < req.query.height && re.l > 0.5) {
+            re.ax = ws[i].x;
+            re.ay = ws[i].y;
+            re.az = ws[i].z;
             result.push(re);
         }
     }
