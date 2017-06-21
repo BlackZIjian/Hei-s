@@ -71,17 +71,38 @@ var C = $M([
 ]);
 router.get('/getStarsPos', function(req, res, next) {
 
-    var result = [];
-    for(var i =0;i<ws.length;i++) {
-        var re = converse.converse(ws[i].x,ws[i].y,ws[i].z,80,R,C,0.3,0.001,0.001,req.query.width,req.query.height);
-        if(re != "error" && re.u > 0 && re.u < req.query.width &&re.v > 0 && re.v < req.query.height && re.l > 0.5) {
-            re.ax = ws[i].x;
-            re.ay = ws[i].y;
-            re.az = ws[i].z;
-            result.push(re);
-        }
+
+    res.send(ws);
+});
+var users = [
+    {
+        name:"liuzhili",
+        comment:"刘妹妹是帅哥",
+        date:"2017-6-18"
+    },
+    {
+        name:"77777",
+        comment:"77即是正义",
+        date:"2017-6-18"
+    },
+    {
+        name:"赵益达",
+        comment:"是你的益达",
+        date:"2017-6-18"
+    },
+    {
+        name:"章皓明",
+        comment:"我是一个抖M",
+        date:"2017-6-18"
     }
-    res.send(result);
+];
+router.post('/postUsers', function(req, res, next) {
+    users.push(req.body);
+    res.send(users);
+});
+router.get('/getUsers', function(req, res, next) {
+
+    res.send(users);
 });
 router.get('/moveCamera', function(req, res, next) {
     C = $M([

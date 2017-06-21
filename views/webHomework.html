@@ -29,17 +29,95 @@
             from {transform: scale(2,2);opacity: 1}
             to {transform: scale(1,1);opacity: 0}
         }
+        .inputBox {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            z-index: -1;
+        }
+        .comment {
+            width: 100%;
+            height: 80%;
+            font-size: 27px;
+        }
+        .name {
+            width: 100%;
+            height: 20%;
+        }
+        .box {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 50px;
+            height: 100px;
+            filter: blur(5px);
+            background-color: antiquewhite;
+            display: none;
+        }
     </style>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="javascripts/sylvester.js"></script>
 </head>
 
-<body id="body" onmousedown="getCanvasPos(event)" >
+<body id="body" onmousemove="getCanvasPos(event)" onmousedown="clickCanvasPos(event)" >
 <canvas  id="myCanvas" class="can" style="position: absolute;left: 0;top: 0;z-index: -1;" width="800" height="945"></canvas>
 <canvas id="noise"  style="position: absolute;left: 0;top: 0;" width="800" height="945"></canvas>
 <div id="content" class="content"></div>
+<div id="box" onclick="changeBoxBlur()" class="box">
+<div class="inputBox">
+
+</div>
+    <input id="comment" class="comment" type="text" placeholder="你想说些什么？">
+<input id="name" class="name" type="text" onkeypress="enterName(event)" placeholder="你叫？">
+</div>
 </body>
 <script type="text/javascript">
     var reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
+
+    var CoordinateConversion = {};
+
+
+
+
+
+    CoordinateConversion.converse = function (x,y,z,l,RC,C,f,dx,dy,width,height) {
+        var R = RC.inverse();
+        var T = (R.x(C)).x(-1);
+        var K = $M([
+            [R.e(1,1),R.e(1,2),R.e(1,3),T.e(1,1)],
+            [R.e(2,1),R.e(2,2),R.e(2,3),T.e(2,1)],
+            [R.e(3,1),R.e(3,2),R.e(3,3),T.e(3,1)],
+            [0,0,0,1]
+        ]);
+        var vw = $M([
+            [x],
+            [y],
+            [z],
+            [1]
+        ]);
+        var vc = K.x(vw);
+        if(vc.e(3,1) < 20)
+            return "error";
+        var m = $M([
+            [f,0,0,0],
+            [0,f,0,0],
+            [0,0,1,0]
+        ]);
+        var zv = (m.x(vc)).x(1 / vc.e(3,1));
+
+        var m2 = $M([
+            [1/dx,0,width/2],
+            [0,1/dy,height/2],
+            [0,0,1]
+        ]);
+
+        var result = m2.x(zv);
+        return {
+            u:result.e(1,1),
+            v:result.e(2,1),
+            l:l*f/vc.e(3,1)
+        }
+    };
 
     String.prototype.colorRgb = function(){
         var sColor = this.toLowerCase();
@@ -69,13 +147,61 @@
     c.height = window.innerHeight;
     var cxt = c.getContext("2d");
     var stars = [];
-
     var colors = [
         "#ffecce",
         "#fff9d4",
         "#b3acb9",
         "#fdffeb"
     ];
+    var userColors =[
+        "#9b9dff",
+        "#b5a7ff",
+        "#9997f4",
+        "#edecff"
+    ];
+
+    var R= $M([
+        [0.87,-1.4,-0.64],
+        [0,0.84,-0.52],
+        [0.75,0.34,0.56]
+    ]);
+    var C = $M([
+        [3],
+        [2.5],
+        [-2.6]
+    ]);
+    var users = [];
+    function clickCanvasPos(e) {
+        var ele = document.getElementById("myCanvas");
+        var rect = document.getElementById("myCanvas").getBoundingClientRect();
+        var pos = {
+            x: e.clientX - rect.left * (ele.width / rect.width),
+            y: e.clientY - rect.top * (ele.height / rect.height)
+        };
+        for(var i =0;i<stars.length;i++) {
+            var star = stars[i];
+            var deltaX = pos.x - star.x;
+            var deltaY = pos.y - star.y;
+            var dis2 = Math.pow(deltaX,2) +  Math.pow(deltaY,2);
+            if(dis2 <= 10) {
+                clickStar(star,i);
+                break;
+            }
+        }
+
+        for(var k =0;k<users.length;k++) {
+            var user = users[k];
+            var starpos = stars[users[k].starIndex];
+            var udeltaX = pos.x - starpos.x ;
+            var udeltaY = pos.y - starpos.y + window.innerHeight / 2;
+            var udis2 = Math.pow(udeltaX,2) +  Math.pow(udeltaY,2);
+            if(udis2 <= 640) {
+                clickUser(user);
+                return;
+            }
+
+        }
+    }
     function getCanvasPos(e)
     {//获取鼠标在canvas上的坐标
         var ele = document.getElementById("myCanvas");
@@ -90,18 +216,100 @@
             var deltaY = pos.y - star.y;
             var dis2 = Math.pow(deltaX,2) +  Math.pow(deltaY,2);
             if(dis2 <= 10) {
-                clickStar(star);
-                break;
+                document.getElementsByTagName("body")[0].style.cursor = "pointer";
+                return;
             }
         }
+
+        for(var k =0;k<users.length;k++) {
+            var user = users[k];
+            var starpos = stars[users[k].starIndex];
+            var udeltaX = pos.x - starpos.x ;
+            var udeltaY = pos.y - starpos.y + window.innerHeight / 2;
+            var udis2 = Math.pow(udeltaX,2) +  Math.pow(udeltaY,2);
+            if(udis2 <= 640) {
+                document.getElementsByTagName("body")[0].style.cursor = "pointer";
+                return;
+            }
+
+        }
+        document.getElementsByTagName("body")[0].style.cursor = "default";
+    }
+    Date.prototype.format = function(fmt) {
+        var o = {
+            "M+" : this.getMonth()+1,                 //月份
+            "d+" : this.getDate(),                    //日
+            "h+" : this.getHours(),                   //小时
+            "m+" : this.getMinutes(),                 //分
+            "s+" : this.getSeconds(),                 //秒
+            "q+" : Math.floor((this.getMonth()+3)/3), //季度
+            "S"  : this.getMilliseconds()             //毫秒
+        };
+        if(/(y+)/.test(fmt)) {
+            fmt=fmt.replace(RegExp.$1, (this.getFullYear()+"").substr(4 - RegExp.$1.length));
+        }
+        for(var k in o) {
+            if(new RegExp("("+ k +")").test(fmt)){
+                fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));
+            }
+        }
+        return fmt;
+    };
+    function enterName(event) {
+        if(event.key == "Enter") {
+            var box = document.getElementById("box");
+            var comment = document.getElementById("comment");
+            var name = document.getElementById("name");
+            axios.post(path +'/webHomework/postUsers',{
+                'comment':comment.value,
+                'name':name.value,
+                'date':new Date().format("yyyy-MM-dd")
+            })
+                .then(function (response) {
+                    users = response.data;
+                    for(var i=0;i<users.length;i++) {
+                        var index =  Math.ceil(Math.random()*stars.length);
+                        while(stars[index].icon) {
+                            index =  Math.ceil(Math.random()*stars.length);
+                        }
+                        users[i].starIndex = index;
+                    }
+                    var con = document.getElementById("content");
+                    con.style.display = "inline";
+                })
+                .catch(function (error) {
+
+                });
+            comment.value = "";
+            name.value = "";
+            box.style.filter = "blur(5px)";
+            box.style.display = "none";
+        }
+    }
+    function changeBoxBlur() {
+        var box = document.getElementById("box");
+        box.style.filter = "blur(1.3px)";
+    }
+    function clickStar(star,i) {
+        var con = document.getElementById("content");
+        if(star.icon){
+            con.style.display = "none";
+            var box = document.getElementById("box");
+            box.style.display = "inline";
+            return;
+        }
+        var mcontent = "这颗星位于x:"+star.ax+",y:"+star.ay+"z:"+star.az+"，还没有人认领";
+
+        con.innerHTML = mcontent;
+        //con.className = "content";
     }
 
-    function clickStar(star) {
-        var mcontent = "这颗星位于x:"+star.ax+",y:"+star.ay+"z:"+star.az+"，是（某用户）于（某时间）加入的记忆";
+    function clickUser(user) {
+        var star = stars[user.starIndex];
+        var mcontent = "这颗星位于x:"+star.ax+",y:"+star.ay+"z:"+star.az+"，是"+ user.name +"于"+ user.date +"加入的记忆:<br>" + user.comment;
         var con = document.getElementById("content");
         con.innerHTML = mcontent;
         //con.className = "content";
-
     }
 
     var Tick = function () {
@@ -118,6 +326,39 @@
         cxt.fillStyle = "#000000";
         cxt.fillRect(0, 0, c.width, c.height);
 
+        for(var j =0;j<users.length;j++) {
+            var user = stars[users[j].starIndex];
+            var ucolor = userColors[user.colorIndex].colorRgb();
+            var urgba = {
+                r: ucolor[0],
+                g: ucolor[1],
+                b: ucolor[2],
+                a: 1
+            };
+            urgba.a = 0.1;
+            cxt.fillStyle = "rgba(" + urgba.r + "," + urgba.g + "," + urgba.b + "," + urgba.a + ")";
+            cxt.beginPath();
+            cxt.arc(user.x, user.y - window.innerHeight / 2, user.allR *8, 0, Math.PI * 2, true);
+            cxt.closePath();
+            cxt.fill();
+            cxt.fillStyle = colors[user.colorIndex];
+            cxt.beginPath();
+            cxt.arc(user.x, user.y- window.innerHeight / 2, user.r*8, 0, Math.PI * 2, true);
+            cxt.closePath();
+            cxt.fill();
+
+            var cr = colors[user.colorIndex].colorRgb();
+            var crgba = {
+                r: cr[0],
+                g: cr[1],
+                b: cr[2],
+                a: 1
+            };
+            crgba.a = 0.2;
+
+            cxt.fillStyle = "rgba(" + crgba.r + "," + crgba.g + "," + crgba.b + "," + crgba.a + ")";
+            cxt.fillRect(user.x-3,user.y-window.innerHeight / 2,6,window.innerHeight / 2);
+        }
 
         for(var i =0;i<stars.length;i++) {
             var star = stars[i];
@@ -144,40 +385,117 @@
 
 
     };
+    function refreshStar() {
+        stars = [];
+        var result = [];
+        for(var j =0;j<ws.length;j++) {
+            var re = CoordinateConversion.converse(ws[j].x,ws[j].y,ws[j].z,80,R,C,0.3,0.001,0.001,window.innerWidth,window.innerHeight);
+            if(re != "error" && re.u > 0 && re.u < window.innerWidth &&re.v > 0 && re.v < window.innerHeight && re.l > 0.5) {
+                re.ax = ws[j].x;
+                re.ay = ws[j].y;
+                re.az = ws[j].z;
+                result.push(re);
+            }
+        }
+        var numX = 20;
+        var numY = 20;
+        var lX = 100;
+        var lY = 100;
+        for(var xq=0;xq<3;xq++) {
+            for (var xk = 0; xk < numX; xk++) {
+                var xarate = Math.random() * 2 + 1;
+                var xaminr = Math.random() * 2 + 1;
+                var xacolor = Math.floor(Math.random() * colors.length);
+                var xastar = {
+                    x: lX / numX * 9 + xq* 5,
+                    y: lY / numY * xk,
+                    r: 0,
+                    allR: 0,
+                    maxr: xaminr + 2,
+                    minr: xaminr,
+                    rate: xarate,
+                    colorIndex: xacolor,
+                    icon:true
+                };
+                stars.push(xastar);
+            }
+        }
+        for(var q=0;q<3;q++) {
+            for (var k = 0; k < numX; k++) {
+                var arate = Math.random() * 2 + 1;
+                var aminr = Math.random() * 2 + 1;
+                var acolor = Math.floor(Math.random() * colors.length);
+                var astar = {
+                    x: lX / numX * k,
+                    y: lY / numY * 9 + q*5,
+                    r: 0,
+                    allR: 0,
+                    maxr: aminr + 2,
+                    minr: aminr,
+                    rate: arate,
+                    colorIndex: acolor,
+                    icon:true
+                };
+                stars.push(astar);
+            }
+        }
+
+        var starPoses = result;
+        for(var i=0;i<starPoses.length;i++) {
+            var rate = Math.random() * 2 + 1;
+            var minr = Math.random() * 2 +1;
+            var color = Math.floor(Math.random() * colors.length);
+            var star = {
+                x: starPoses[i].u,
+                y: starPoses[i].v,
+                r: 0,
+                allR: 0,
+                maxr: (minr + 2)* starPoses[i].l,
+                minr: minr * starPoses[i].l,
+                rate: rate,
+                colorIndex: color,
+                ax:starPoses[i].ax,
+                ay:starPoses[i].ay,
+                az:starPoses[i].az
+            };
+            stars.push(star);
+        }
+        var path = "http://localhost:14929";
+        axios.get(path +'/webHomework/getUsers')
+            .then(function (response) {
+                users = response.data;
+                for(var i=0;i<users.length;i++) {
+
+                    var index =  Math.ceil(Math.random()*stars.length);
+                    while(stars[index].icon) {
+                        index =  Math.ceil(Math.random()*stars.length);
+                    }
+                    users[i].starIndex = index;
+                }
+            })
+            .catch(function (error) {
+                console.log(error);
+            });
+    }
+    var ws = [];
     window.setInterval(Tick,tick);
-    var path = "http://heibe.imwork.net:39881";
+    var path = "http://localhost:14929";
     axios.get(path +'/webHomework/getStarsPos', {
         params: {
             width: window.innerWidth,
             height:window.innerHeight
         }})
         .then(function (response) {
-            var starPoses = response.data;
-            for(var i=0;i<starPoses.length;i++) {
-                var rate = Math.random() * 2 + 1;
-                var minr = Math.random() * 2 +1;
-                var color = Math.floor(Math.random() * colors.length);
-                var star = {
-                    x: starPoses[i].u,
-                    y: starPoses[i].v,
-                    r: 0,
-                    allR: 0,
-                    maxr: (minr + 2)* starPoses[i].l,
-                    minr: minr * starPoses[i].l,
-                    rate: rate,
-                    colorIndex: color,
-                    ax:starPoses[i].ax,
-                    ay:starPoses[i].ay,
-                    az:starPoses[i].az
-                };
-                stars.push(star);
-            }
+            ws = response.data;
+            refreshStar();
         })
         .catch(function (error) {
             console.log(error);
         });
 </script>
 <script type="text/javascript">
+
+
     var nc = document.getElementById("noise");
     nc.width = window.innerWidth;
     nc.height = window.innerHeight;
@@ -249,42 +567,5 @@
 
 
 
-</script>
-<script type="text/javascript">
-    var kw = false;
-    var ks = false;
-    var ka = false;
-    var kd = false;
-    document.onkeydown=function(event){
-        var e = event || window.event || arguments.callee.caller.arguments[0];
-                   if(e && e.keyCode==87){ // 按 W
-                          kw = true;
-                   }
-        if(e && e.keyCode==83){ // 按 W
-            ks = true;
-        }
-        if(e && e.keyCode==65){ // 按 W
-            ka = true;
-        }
-        if(e && e.keyCode==68){ // 按 W
-            kd = true;
-        }
-    };
-
-    document.onkeyup=function(event){
-        var e = event || window.event || arguments.callee.caller.arguments[0];
-        if(e && e.keyCode==87){ // 按 W
-            kw = false;
-        }
-        if(e && e.keyCode==83){ // 按 W
-            ks = false;
-        }
-        if(e && e.keyCode==65){ // 按 W
-            ka = false;
-        }
-        if(e && e.keyCode==68){ // 按 W
-            kd = false;
-        }
-    };
 </script>
 </html>
